@@ -7,11 +7,11 @@ OUTPUT=bin/
 default: $(EXEC)
 
 mini-shell: $(SRC)mini-shell.c
-	@if [ -d "bin/" ]; then\
+	@if [ -d "$(OUTPUT)" ]; then\
 		rm -r $(OUTPUT);\
 	fi
 	mkdir $(OUTPUT)
 	gcc $(CFLAGS) -o $(OUTPUT)$@ $^
 
 clean:
-	rm -r bin/
+	rm -r $(OUTPUT)
