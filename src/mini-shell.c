@@ -5,58 +5,63 @@
 #include<sys/wait.h>
 #include<string.h>
 #include<ctype.h>
+#include<string.h>
 
 int parse_line(char *s, char **argv[])
 {
-    int first_letter = 0;
+    int argi = 0;
+    char *arg;
     int space = 0;
-    int argvi = 0;
-    for (size_t i = 0; i < sizeof(s); i++)
+
+    for (size_t i = 0; i < strlen(s); i++)
     {
         if(isspace(s[i]) != 0){
-            space = i;
-            *argv[argvi] = malloc(first_letter - space);
-            for (size_t i = first_letter; i < space; i++)
+            arg = (char*)(malloc(sizeof(char) * (i - space + 1)));
+            for (size_t j = 0; j < i - space; j++)
             {
-                
+                arg[j] = s[j + space];
             }
-            argvi++;
+            arg[i - space] = '\0';
+            (*argv)[argi] = arg;
+            argi++;
+            space = i + 1;
         }
     }
 
+    (*argv)[argi] = NULL;
     return 0;
 }
 
 int main(int argc, char const *argv[])
 {
-    char c[255];
+    char buffer[1024];
     int byte_read;
     int child_pid;
-    int output;
-    char** argvcmd = malloc(18 * sizeof(char*));
-    for (size_t i = 0; i < 18; i++)
-    {
-        argvcmd[i] = malloc(1024 * sizeof(char));
-    }
+    char **argvcmd = malloc(sizeof(char*) * 18);
 
     while (1)
     {
         write(STDOUT_FILENO, "$ ", sizeof("$ "));
-        byte_read = read(STDIN_FILENO, c, sizeof(c));
-        c[byte_read - 1] = '\0';
-        parse_line(c, &argvcmd);
+        byte_read = read(STDIN_FILENO, buffer, sizeof(buffer));
+        buffer[byte_read - 1] = ' ';
+        buffer[byte_read] = '\0';
+        parse_line(buffer, &argvcmd);
         if(byte_read != 1){
-            if(strcmp(c, "exit") == 0){
+            if(strcmp(buffer, "exit ") == 0){
+                for (size_t i = 0; i < sizeof(argvcmd); i++)
+                {
+                    free(argvcmd[i]);
+                }
+                
                 free(argvcmd);
                 exit(0);
             }
-            if((child_pid = fork()) == 0){
-                output = execlp(c, c, NULL);
-                if(output < 0){
+            if((child_pid = fork()) == 0){ //child
+                if(execvp(argvcmd[0], argvcmd) < 0){
                     perror("Erreur exécution: ");
                     exit(-1);
                 }
-            } else {
+            } else { //parent
                 wait(&child_pid);
             }
         }
