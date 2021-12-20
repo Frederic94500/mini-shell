@@ -64,7 +64,7 @@ int parse_line(char *s, char **argv[])
             space = i + 1;
         }
 
-        if(strpbrk(s, ">"))
+        if(s[i] == '>')
         {
             break;
         }
@@ -128,7 +128,7 @@ int main(int argc, char const *argv[])
                         close(fd_out);
                     }       
                 }
-                if(execvp(argvcmd[0], argvcmd) < 0){ //Problème, ne redirige pas
+                if(execvp(argvcmd[0], argvcmd) < 0){
                     perror("Erreur execution: ");
                     exit(-1);
                 }
