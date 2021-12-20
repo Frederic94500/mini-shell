@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-Wall
+CFLAGS=
 EXEC=mini-shell
 SRC=src/
 OUTPUT=bin/

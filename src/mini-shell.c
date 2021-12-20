@@ -51,10 +51,6 @@ int parse_line(char *s, char **argv[])
     return argi;
 }
 
-/*void intHandler(int pid, int sig){
-    kill(pid);
-}*/
-
 int main(int argc, char const *argv[])
 {
     char buffer[1024];
@@ -62,6 +58,8 @@ int main(int argc, char const *argv[])
     int child_pid;
     int nb_arg;
     char **argvcmd = malloc(sizeof(char*) * 18);
+    sigset_t sig = {SIGINT};
+    sigprocmask(SIG_BLOCK, &sig, NULL);
 
     while (1)
     {
@@ -89,6 +87,7 @@ int main(int argc, char const *argv[])
             }
 
             if((child_pid = fork()) == 0){ //child
+                sigprocmask(SIG_UNBLOCK, &sig, NULL);
                 if(strpbrk(buffer, ">"))
                 {
                     int fd_out = open(argvcmd[nb_arg - 1], O_RDWR | O_CREAT | O_TRUNC, 0666);
@@ -110,9 +109,8 @@ int main(int argc, char const *argv[])
                 }
             } else if(child_pid < 0){
                 perror("Erreur fork: ");
-            } else { //parent
+            } else { //parent  
                 wait(&child_pid);
-                //signal(SIGINT, send_kill(child_pid));
             }
         }
     }
