@@ -36,7 +36,7 @@ char* get_filename(char *s){
         }
     }
 
-    return argv[argi];
+    return argv[argi - 1];
 }
 
 int parse_line(char *s, char **argv[])
@@ -116,7 +116,7 @@ int main(int argc, char const *argv[])
             if((child_pid = fork()) == 0){ //child
                 if(strpbrk(buffer, ">"))
                 {
-                    int fd_out = open("test.txt", O_RDWR | O_CREAT | O_TRUNC, 0666);
+                    int fd_out = open(get_filename(buffer), O_RDWR | O_CREAT | O_TRUNC, 0666);
                     if(fd_out < 0)
                     {
                         perror("Erreur open: ");
@@ -125,10 +125,10 @@ int main(int argc, char const *argv[])
                         {
                             perror("Erreur dup2: ");
                         }
-                        //close(fd_out);
+                        close(fd_out);
                     }       
                 }
-                if(execvp(argvcmd[0], argvcmd) < 0){
+                if(execvp(argvcmd[0], argvcmd) < 0){ //Problème, ne redirige pas
                     perror("Erreur execution: ");
                     exit(-1);
                 }
