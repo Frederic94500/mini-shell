@@ -1,21 +1,42 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<unistd.h>
-#include<sys/types.h>
-#include<sys/wait.h>
 #include<string.h>
 #include<ctype.h>
 #include<string.h>
+#include<fcntl.h>
+#include<signal.h>
+#include<sys/types.h>
+#include<sys/stat.h>
+#include<sys/wait.h>
 
-int detect_redirect(char *s){
+char* get_filename(char *s){
+    int argi = 0;
+    char *arg;
+    int space = 0;
+    char *argv[18];
+
     for (size_t i = 0; i < strlen(s); i++)
     {
-        if(s[i] == '>')
-        {
-            return 1;
+        if(isspace(s[i]) || s[i] == '\0'){
+            if(i - space == 0)
+            {
+                space++;
+                continue;
+            }
+            arg = (char*)(malloc(sizeof(char) * (i - space + 1)));
+            for (size_t j = 0; j < i - space; j++)
+            {
+                arg[j] = s[j + space];
+            }
+            arg[i - space] = '\0';
+            argv[argi] = arg;
+            argi++;
+            space = i + 1;
         }
     }
-    return 0;
+
+    return argv[argi];
 }
 
 int parse_line(char *s, char **argv[])
@@ -43,7 +64,7 @@ int parse_line(char *s, char **argv[])
             space = i + 1;
         }
 
-        if(detect_redirect(s) == 1)
+        if(strpbrk(s, ">"))
         {
             break;
         }
@@ -56,6 +77,10 @@ int parse_line(char *s, char **argv[])
     (*argv)[argi] = NULL;
     return 0;
 }
+
+/*void intHandler(int pid, int sig){
+    kill(pid);
+}*/
 
 int main(int argc, char const *argv[])
 {
@@ -78,7 +103,7 @@ int main(int argc, char const *argv[])
         }
 
         if(byte_read != 1 && nb_arg == 0){
-            if(strncmp(buffer, "exit", 1) == 0){
+            if(strncmp(buffer, "exit", 1) == 0){ //exit shell
                 for (size_t i = 0; i < sizeof(argvcmd); i++)
                 {
                     free(argvcmd[i]);
@@ -89,20 +114,29 @@ int main(int argc, char const *argv[])
             }
 
             if((child_pid = fork()) == 0){ //child
+                if(strpbrk(buffer, ">"))
+                {
+                    int fd_out = open("test.txt", O_RDWR | O_CREAT | O_TRUNC, 0666);
+                    if(fd_out < 0)
+                    {
+                        perror("Erreur open: ");
+                    } else {
+                        if(dup2(fd_out, STDOUT_FILENO) < 0)
+                        {
+                            perror("Erreur dup2: ");
+                        }
+                        //close(fd_out);
+                    }       
+                }
                 if(execvp(argvcmd[0], argvcmd) < 0){
-                    perror("Erreur exécution: ");
+                    perror("Erreur execution: ");
                     exit(-1);
                 }
+            } else if(child_pid < 0){
+                perror("Erreur fork: ");
             } else { //parent
                 wait(&child_pid);
-                /*if(detect_redirect(buffer) == 1)
-                {
-                    char *buf_red[2048];
-                    int fd_out = open();                    
-                    dup2(STDOUT_FILENO, fd_out);
-                    write(fd_out, )
-                    close
-                }*/
+                //signal(SIGINT, send_kill(child_pid));
             }
         }
     }
