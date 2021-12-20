@@ -70,7 +70,8 @@ int parse_line(char *s, char **argv[])
         }
     }
 
-    if(argi > 17){
+    if(argi > 17)
+    {
         return -1;
     }
 
@@ -85,10 +86,15 @@ int parse_line(char *s, char **argv[])
 int main(int argc, char const *argv[])
 {
     char buffer[1024];
+    char buffer2[1024];
     int byte_read;
+    int byte_read2;
     int child_pid;
+    int child_pid2;
     int nb_arg;
+    int nb_arg2;
     char **argvcmd = malloc(sizeof(char*) * 18);
+    char **argvcmd2 = malloc(sizeof(char*) * 18);
 
     while (1)
     {
@@ -97,7 +103,8 @@ int main(int argc, char const *argv[])
         buffer[byte_read - 1] = ' ';
         buffer[byte_read] = '\0';
 
-        if((nb_arg = parse_line(buffer, &argvcmd)) == -1){
+        if((nb_arg = parse_line(buffer, &argvcmd)) == -1)
+        {
             char *temp = "Trop d'arguments\n";
             write(STDOUT_FILENO, temp, strlen(temp));
         }
@@ -113,7 +120,27 @@ int main(int argc, char const *argv[])
                 exit(0);
             }
 
-            if((child_pid = fork()) == 0){ //child
+            if(strpbrk(buffer, "|"))
+            {
+                write(STDOUT_FILENO, "> ", sizeof("> "));
+                byte_read2 = read(STDIN_FILENO, buffer2, sizeof(buffer2));
+                buffer2[byte_read2 - 1] = ' ';
+                buffer2[byte_read2] = '\0';
+
+                if((nb_arg2 = parse_line(buffer2, &argvcmd2)) == -1)
+                {
+                    char *temp = "Trop d'arguments\n";
+                    write(STDOUT_FILENO, temp, strlen(temp));
+                }
+
+                if(byte_read2 != 1 && nb_arg2 == 0)
+                {
+
+                }
+            }
+
+            if((child_pid = fork()) == 0)//child
+            {
                 if(strpbrk(buffer, ">"))
                 {
                     int fd_out = open(get_filename(buffer), O_RDWR | O_CREAT | O_TRUNC, 0666);
@@ -128,7 +155,8 @@ int main(int argc, char const *argv[])
                         close(fd_out);
                     }       
                 }
-                if(execvp(argvcmd[0], argvcmd) < 0){
+                if(execvp(argvcmd[0], argvcmd) < 0)
+                {
                     perror("Erreur execution: ");
                     exit(-1);
                 }
