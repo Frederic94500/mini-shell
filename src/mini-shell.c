@@ -10,35 +10,6 @@
 #include<sys/stat.h>
 #include<sys/wait.h>
 
-char* get_filename(char *s){
-    int argi = 0;
-    char *arg;
-    int space = 0;
-    char *argv[18];
-
-    for (size_t i = 0; i < strlen(s); i++)
-    {
-        if(isspace(s[i]) || s[i] == '\0'){
-            if(i - space == 0)
-            {
-                space++;
-                continue;
-            }
-            arg = (char*)(malloc(sizeof(char) * (i - space + 1)));
-            for (size_t j = 0; j < i - space; j++)
-            {
-                arg[j] = s[j + space];
-            }
-            arg[i - space] = '\0';
-            argv[argi] = arg;
-            argi++;
-            space = i + 1;
-        }
-    }
-
-    return argv[argi - 1];
-}
-
 int parse_line(char *s, char **argv[])
 {
     int argi = 0;
@@ -66,16 +37,18 @@ int parse_line(char *s, char **argv[])
 
         if(s[i] == '>')
         {
-            break;
+            (*argv)[argi] = NULL;
+            argi++;
         }
     }
 
-    if(argi > 17){
+    if(argi > 17)
+    {
         return -1;
     }
 
     (*argv)[argi] = NULL;
-    return 0;
+    return argi;
 }
 
 /*void intHandler(int pid, int sig){
@@ -97,12 +70,14 @@ int main(int argc, char const *argv[])
         buffer[byte_read - 1] = ' ';
         buffer[byte_read] = '\0';
 
-        if((nb_arg = parse_line(buffer, &argvcmd)) == -1){
+        if((nb_arg = parse_line(buffer, &argvcmd)) == -1)
+        {
             char *temp = "Trop d'arguments\n";
             write(STDOUT_FILENO, temp, strlen(temp));
         }
 
-        if(byte_read != 1 && nb_arg == 0){
+        if(byte_read != 1 && nb_arg >= 0)
+        {
             if(strncmp(buffer, "exit", 1) == 0){ //exit shell
                 for (size_t i = 0; i < sizeof(argvcmd); i++)
                 {
@@ -116,7 +91,7 @@ int main(int argc, char const *argv[])
             if((child_pid = fork()) == 0){ //child
                 if(strpbrk(buffer, ">"))
                 {
-                    int fd_out = open(get_filename(buffer), O_RDWR | O_CREAT | O_TRUNC, 0666);
+                    int fd_out = open(argvcmd[nb_arg - 1], O_RDWR | O_CREAT | O_TRUNC, 0666);
                     if(fd_out < 0)
                     {
                         perror("Erreur open: ");
@@ -128,7 +103,8 @@ int main(int argc, char const *argv[])
                         close(fd_out);
                     }       
                 }
-                if(execvp(argvcmd[0], argvcmd) < 0){
+                if(execvp(argvcmd[0], argvcmd) < 0)
+                {
                     perror("Erreur execution: ");
                     exit(-1);
                 }
