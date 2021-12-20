@@ -35,14 +35,14 @@ int parse_line(char *s, char **argv[])
             space = i + 1;
         }
 
-        if(s[i] == '>')
+        if(s[i] == '>') //Redirect
         {
             (*argv)[argi] = NULL;
             argi++;
         }
     }
 
-    if(argi > 17)
+    if(argi > 17) //Too much args
     {
         return -1;
     }
@@ -79,7 +79,7 @@ int main(int argc, char const *argv[])
 
         if(byte_read != 1 && nb_arg >= 0)
         {
-            if(strncmp(buffer, "exit", 1) == 0){ //exit shell
+            if(strncmp(buffer, "exit", 1) == 0){ //Exit shell
                 for (size_t i = 0; i < sizeof(argvcmd); i++)
                 {
                     free(argvcmd[i]);
@@ -96,7 +96,7 @@ int main(int argc, char const *argv[])
                 int pipefd[2];
                 int sub_child_pid;
 
-                if(strpbrk(buffer, "|"))
+                if(strpbrk(buffer, "|")) //Pipe
                 {
                     argvcmd[nb_arg - 1] = NULL;
                     write(STDOUT_FILENO, "> ", 2);
