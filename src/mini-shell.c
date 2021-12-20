@@ -54,11 +54,14 @@ int parse_line(char *s, char **argv[])
 int main(int argc, char const *argv[])
 {
     char buffer[1024];
+    char buffer_2[1024];
     int byte_read;
     int child_pid;
     int nb_arg;
-    char **argvcmd = malloc(sizeof(char*) * 18);
-    sigset_t sig = {SIGINT};
+    char **argvcmd = malloc(sizeof(char*) * 20);
+    char **argvcmd_2 = malloc(sizeof(char*) * 20);
+
+    sigset_t sig = {{SIGINT}};
     sigprocmask(SIG_BLOCK, &sig, NULL);
 
     while (1)
@@ -70,7 +73,7 @@ int main(int argc, char const *argv[])
 
         if((nb_arg = parse_line(buffer, &argvcmd)) == -1)
         {
-            char *temp = "Trop d'arguments\n";
+            char *temp = "Too much arguments\n";
             write(STDOUT_FILENO, temp, strlen(temp));
         }
 
@@ -80,36 +83,71 @@ int main(int argc, char const *argv[])
                 for (size_t i = 0; i < sizeof(argvcmd); i++)
                 {
                     free(argvcmd[i]);
+                    free(argvcmd_2[i]);
                 }
                 
                 free(argvcmd);
+                free(argvcmd_2);
                 exit(0);
             }
 
-            if((child_pid = fork()) == 0){ //child
+            if((child_pid = fork()) == 0){ //Child
                 sigprocmask(SIG_UNBLOCK, &sig, NULL);
-                if(strpbrk(buffer, ">"))
+                int pipefd[2];
+                int sub_child_pid;
+
+                if(strpbrk(buffer, "|"))
+                {
+                    argvcmd[nb_arg - 1] = NULL;
+                    write(STDOUT_FILENO, "> ", 2);
+                    int byte_read_2 = read(STDIN_FILENO, buffer_2, sizeof(buffer_2));
+                    buffer_2[byte_read_2 - 1] = ' ';
+                    buffer_2[byte_read_2] = '\0';
+
+                    parse_line(buffer_2, &argvcmd_2);
+                    pipe(pipefd);
+
+                    if(sub_child_pid = fork())
+                    {
+                        wait(&sub_child_pid);
+                        dup2(pipefd[0], STDIN_FILENO);
+                        close(pipefd[0]);
+                        close(pipefd[1]);
+                        execvp(argvcmd_2[0], argvcmd_2);
+                    }
+                }
+
+                if(strpbrk(buffer, ">")) //Redirection
                 {
                     int fd_out = open(argvcmd[nb_arg - 1], O_RDWR | O_CREAT | O_TRUNC, 0666);
                     if(fd_out < 0)
                     {
-                        perror("Erreur open: ");
+                        perror("Error open: ");
                     } else {
                         if(dup2(fd_out, STDOUT_FILENO) < 0)
                         {
-                            perror("Erreur dup2: ");
+                            perror("Error dup2: ");
                         }
                         close(fd_out);
                     }       
                 }
-                if(execvp(argvcmd[0], argvcmd) < 0)
+
+                if(sub_child_pid == 0)
                 {
-                    perror("Erreur execution: ");
+                    dup2(pipefd[1], STDOUT_FILENO);
+                    close(pipefd[0]);
+                    close(pipefd[1]);
+                }
+
+                if(execvp(argvcmd[0], argvcmd) < 0) //Execute
+                {
+                    perror("Error execution: ");
                     exit(-1);
                 }
+
             } else if(child_pid < 0){
-                perror("Erreur fork: ");
-            } else { //parent  
+                perror("Error fork: ");
+            } else { //Parent  
                 wait(&child_pid);
             }
         }
